@@ -1,6 +1,6 @@
 import React from 'react';
 import { Participant } from '../types';
-import { LeagueLogo } from './LeagueLogo';
+import LeagueLogo from './LeagueLogo';
 
 interface DashboardProps {
   participants: Participant[];
