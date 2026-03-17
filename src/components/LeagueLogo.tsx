@@ -7,9 +7,9 @@ interface LeagueLogoProps {
 }
 
 const sizeClassMap: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'w-20 h-20',
-  md: 'w-28 h-28',
-  lg: 'w-40 h-40',
+  sm: 'w-32 h-32',
+  md: 'w-48 h-48',
+  lg: 'w-64 h-64',
 };
 
 // ⚠️ ВАЖНО: className должен быть в деструктуризации с дефолтным значением ''
