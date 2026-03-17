@@ -1,116 +1,112 @@
 import React from 'react';
-import { Participant } from '../types';
+import { Parameter, Participant } from '../types';
 import LeagueLogo from './LeagueLogo';
 
 interface DashboardProps {
   participants: Participant[];
-  isLoading?: boolean;
-  onRefresh?: () => void;
+  parameters: Parameter[];
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ participants, isLoading, onRefresh }) => {
-  // Сортировка по убыванию баллов
-  const sortedParticipants = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+const medalByRank: Record<number, string> = {
+  1: '1',
+  2: '2',
+  3: '3',
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
+  const sorted = [...participants].sort((a, b) => b.totalScore - a.totalScore);
+  const maxScore = Math.max(...sorted.map((p) => p.totalScore), 1);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      {/* Шапка */}
-      <header className="flex flex-col items-center mb-16 text-center">
-        <div className="mb-6 transform hover:scale-105 transition-transform duration-500">
-          <LeagueLogo />
-        </div>
-        <h1 className="text-4xl md:text-5xl font-light tracking-[0.2em] uppercase mb-4 text-white">
-          Лига <span className="text-amber-500 font-medium">Чемпионов</span>
-        </h1>
-        <div className="flex items-center gap-4">
-          <div className="h-px w-12 bg-amber-500/50"></div>
-          <p className="text-sm tracking-[0.4em] text-neutral-500 uppercase">
-            01.03.2026 — 01.09.2026
-          </p>
-          <div className="h-px w-12 bg-amber-500/50"></div>
-        </div>
-        
-        {/* Кнопка обновления для пользователя */}
-        {onRefresh && (
-          <button 
-            onClick={onRefresh}
-            disabled={isLoading}
-            className={`mt-8 px-6 py-2 text-[10px] tracking-[0.2em] uppercase border border-white/10 rounded-full transition-all hover:border-amber-500/50 hover:text-amber-500 ${isLoading ? 'opacity-50 animate-pulse' : ''}`}
-          >
-            {isLoading ? 'Обновление...' : 'Обновить результаты'}
-          </button>
-        )}
-      </header>
-
-      {/* Список участников */}
-      <div className="space-y-4">
-        {sortedParticipants.map((p, index) => {
-          const isTop3 = index < 3;
-          const rankColors = [
-            'border-amber-500/40 bg-amber-500/5 shadow-[0_0_20px_rgba(245,158,11,0.1)]',
-            'border-neutral-400/30 bg-neutral-400/5',
-            'border-orange-800/30 bg-orange-800/5'
-          ];
-
-          return (
-            <div 
-              key={p.id}
-              className={`relative overflow-hidden group border transition-all duration-500 ${
-                isTop3 ? rankColors[index] : 'border-white/5 bg-neutral-900/20 hover:border-white/20'
-              } rounded-xl p-6 flex flex-col md:flex-row items-center gap-6`}
-            >
-              {/* Ранг */}
-              <div className="flex-shrink-0 w-12 flex justify-center">
-                {index === 0 ? <span className="text-3xl">🏆</span> :
-                 index === 1 ? <span className="text-3xl">🥈</span> :
-                 index === 2 ? <span className="text-3xl">🥉</span> :
-                 <span className="text-xl font-light text-neutral-600">{(index + 1).toString().padStart(2, '0')}</span>}
-              </div>
-
-              {/* Инфо */}
-              <div className="flex-grow text-center md:text-left">
-                <h3 className="text-xl font-medium tracking-wide mb-3 group-hover:text-amber-500 transition-colors">
-                  {p.name}
-                </h3>
-                
-                {/* Параметры */}
-                <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                  {p.parameters.map((param, idx) => (
-                    <div key={idx} className="px-2 py-1 rounded bg-white/5 border border-white/5 flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-tighter text-neutral-500">{param.name}</span>
-                      <span className="text-[10px] font-bold text-amber-500/80">{param.value * param.weight}</span>
-                    </div>
-                  ))}
-                  <div className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-tighter text-amber-500">Выручка</span>
-                    <span className="text-[10px] font-bold text-amber-500">
-                      {Math.floor(p.revenue / 50000) * 5}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Баллы */}
-              <div className="flex-shrink-0 text-center md:text-right min-w-[120px]">
-                <div className="text-4xl font-light tracking-tighter text-white">
-                  {p.totalPoints}<span className="text-xs uppercase tracking-widest text-neutral-500 ml-2">pts</span>
-                </div>
-                <div className="w-full bg-white/5 h-1 mt-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-amber-500 transition-all duration-1000 ease-out"
-                    style={{ width: `${Math.min((p.totalPoints / (sortedParticipants[0].totalPoints || 1)) * 100, 100)}%` }}
-                  ></div>
-                </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
+        <header className="border border-zinc-800 bg-zinc-900/70 px-6 py-6 md:px-8 md:py-7">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-5">
+              <LeagueLogo size="md" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-amber-200/80">Турнир</p>
+                <h1 className="mt-1 font-serif text-3xl uppercase tracking-[0.08em] md:text-4xl">Лига чемпионов</h1>
+                <p className="mt-2 text-sm text-zinc-300">01.03.2026 - 01.09.2026</p>
               </div>
             </div>
-          );
-        })}
-      </div>
+            <div className="grid grid-cols-2 gap-3 text-right sm:w-auto">
+              <div className="border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Участники</p>
+                <p className="mt-1 text-2xl font-semibold text-zinc-100">{participants.length}</p>
+              </div>
+              <div className="border border-amber-700/40 bg-zinc-950/70 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Лидер</p>
+                <p className="mt-1 text-2xl font-semibold text-amber-300">{sorted[0]?.totalScore ?? 0}</p>
+              </div>
+            </div>
+          </div>
+        </header>
 
-      {/* Футер */}
-      <footer className="mt-20 text-center text-neutral-600">
-        <p className="text-[10px] uppercase tracking-[0.5em]">Обновлено: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
-      </footer>
+        <main className="mt-6 border border-zinc-800 bg-zinc-900/50">
+          <div className="grid grid-cols-12 gap-4 border-b border-zinc-800 px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-zinc-400 md:px-6">
+            <div className="col-span-8">Участник и параметры</div>
+            <div className="col-span-4 text-right">Итог</div>
+          </div>
+
+          {sorted.length === 0 && (
+            <div className="px-6 py-16 text-center text-zinc-500">Нет данных для отображения</div>
+          )}
+
+          {sorted.map((participant, index) => {
+            const rank = index + 1;
+            const topLine = rank <= 3 ? 'border-l-2 border-l-amber-400/80' : 'border-l-2 border-l-zinc-700';
+            const parameterItems = parameters
+              .map((param) => ({
+                id: param.id,
+                name: param.name,
+                score: (participant.parameters[param.name] || 0) * param.weight,
+              }))
+              .filter((item) => item.score !== 0);
+
+            return (
+              <article
+                key={participant.id}
+                className={`grid grid-cols-12 gap-4 border-b border-zinc-800/90 px-4 py-5 transition-colors hover:bg-zinc-900 md:px-6 ${topLine}`}
+              >
+                <div className="col-span-12 md:col-span-8">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center border border-zinc-700 bg-zinc-950 text-sm font-semibold text-zinc-300">
+                      {medalByRank[rank] ?? rank}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-2xl font-semibold leading-tight text-zinc-100">{participant.fullName}</h2>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-300">
+                        {parameterItems.length === 0 && <span className="text-zinc-500">Нет начислений по параметрам</span>}
+                        {parameterItems.map((item) => (
+                          <span key={item.id} className="whitespace-nowrap">
+                            {item.name}: <span className={item.score < 0 ? 'text-rose-300' : 'text-amber-200'}>{item.score}</span>
+                          </span>
+                        ))}
+                        <span className="whitespace-nowrap text-zinc-200">Валовка: {participant.revenue.toLocaleString('ru-RU')} ₽</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-12 md:col-span-4 md:text-right">
+                  <p className="text-5xl font-semibold tracking-tight text-zinc-50">{participant.totalScore}</p>
+                  <p className="mt-1 text-sm text-zinc-300">баллов</p>
+                  <p className="mt-1 text-sm text-zinc-400">в т.ч. за выручку: {participant.revenueScore}</p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-700 via-amber-500 to-orange-700"
+                      style={{ width: `${Math.max(6, (participant.totalScore / maxScore) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </main>
+      </div>
     </div>
   );
 };
+
+export default Dashboard;
