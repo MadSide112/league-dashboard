@@ -20,36 +20,33 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. Загрузка данных: сначала кэш, потом обновление с сервера
 useEffect(() => {
-  // Мгновенно показываем данные из localStorage, чтобы интерфейс не моргал
-  const saved = localStorage.getItem('participants');
-  if (saved) {
-    try {
-      setParticipants(JSON.parse(saved));
-    } catch (e) {
-      console.error('Ошибка парсинга localStorage:', e);
-      localStorage.removeItem('participants');
-    }
-  }
-
-  // ВСЕГДА загружаем актуальные данные из Google Таблицы
-  syncWithDatabase(SHEET_URL, parameters)
-    .then(data => {
-      if (data && data.length > 0) {
-        setParticipants(data); // Перезаписываем состояние свежими данными
+  const loadInitialData = async () => {
+    // 1. Мгновенно показываем кэш, чтобы интерфейс не "мигал"
+    const cached = localStorage.getItem('participants');
+    if (cached) {
+      try {
+        setParticipants(JSON.parse(cached));
+      } catch {
+        localStorage.removeItem('participants');
       }
-    })
-    .catch(err => {
-      console.error('Ошибка загрузки из таблицы:', err);
-      // Если ошибка сети, оставляем данные из localStorage
-    });
-}, [parameters]); // Добавили parameters в зависимости, если они влияют на sync
+    }
 
-// 2. Сохранение в localStorage при любом изменении
-useEffect(() => {
-  localStorage.setItem('participants', JSON.stringify(participants));
-}, [participants]);
+    // 2. Загружаем свежие данные (ТОЛЬКО ЧТЕНИЕ)
+    try {
+      // Используем importParticipantsFromSheet или создайте fetchParticipantsFromSheet
+      const freshData = await importParticipantsFromSheet(SHEET_URL, parameters);
+      if (freshData && freshData.length > 0) {
+        setParticipants(freshData);
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки из таблицы:', err);
+      // При ошибке сети оставляем данные из localStorage
+    }
+  };
+
+  loadInitialData();
+}, [parameters]); // parameters нужны, если они влияют на структуру загружаемых данных
 
   // Keyboard shortcut Ctrl+Shift+A for Admin
   useEffect(() => {
