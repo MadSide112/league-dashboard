@@ -20,20 +20,36 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('participants');
-    if (saved) {
+  // 1. Загрузка данных: сначала кэш, потом обновление с сервера
+useEffect(() => {
+  // Мгновенно показываем данные из localStorage, чтобы интерфейс не моргал
+  const saved = localStorage.getItem('participants');
+  if (saved) {
+    try {
       setParticipants(JSON.parse(saved));
-    } else {
-      syncWithDatabase(SHEET_URL, parameters).then(data => {
-        if (data && data.length > 0) setParticipants(data);
-      }).catch(console.error);
+    } catch (e) {
+      console.error('Ошибка парсинга localStorage:', e);
+      localStorage.removeItem('participants');
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    localStorage.setItem('participants', JSON.stringify(participants));
-  }, [participants]);
+  // ВСЕГДА загружаем актуальные данные из Google Таблицы
+  syncWithDatabase(SHEET_URL, parameters)
+    .then(data => {
+      if (data && data.length > 0) {
+        setParticipants(data); // Перезаписываем состояние свежими данными
+      }
+    })
+    .catch(err => {
+      console.error('Ошибка загрузки из таблицы:', err);
+      // Если ошибка сети, оставляем данные из localStorage
+    });
+}, [parameters]); // Добавили parameters в зависимости, если они влияют на sync
+
+// 2. Сохранение в localStorage при любом изменении
+useEffect(() => {
+  localStorage.setItem('participants', JSON.stringify(participants));
+}, [participants]);
 
   // Keyboard shortcut Ctrl+Shift+A for Admin
   useEffect(() => {
