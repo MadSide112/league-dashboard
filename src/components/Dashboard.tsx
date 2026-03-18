@@ -2,7 +2,7 @@ import React from 'react';
 import { Parameter, Participant } from '../types';
 import LeagueLogo from './LeagueLogo';
 // ИСПРАВЛЕНИЕ 1: Добавляем импорт фона
-import bgImage from '../assets/dashboard-bg.jpg'; 
+import bgImage from '../assets/back.png'; 
 
 interface DashboardProps {
   participants: Participant[];
