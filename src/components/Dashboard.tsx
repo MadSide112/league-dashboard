@@ -34,11 +34,11 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
             </div>
             <div className="grid grid-cols-2 gap-3 text-right sm:w-auto">
               <div className="border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Участники</p>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество участников</p>
                 <p className="mt-1 text-2xl font-semibold text-zinc-100">{participants.length}</p>
               </div>
               <div className="border border-amber-700/40 bg-zinc-950/70 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Лидер</p>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество баллов у лидера</p>
                 <p className="mt-1 text-2xl font-semibold text-amber-300">{sorted[0]?.totalScore ?? 0}</p>
               </div>
             </div>
