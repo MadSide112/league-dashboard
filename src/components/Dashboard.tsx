@@ -111,6 +111,5 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
       </div>
     </div>
   );
-      };
 
 export default Dashboard;
