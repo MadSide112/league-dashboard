@@ -27,33 +27,37 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
           <header className="border border-zinc-800 bg-zinc-900/70 px-6 py-6 md:px-8 md:py-7">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-5">
-                <LeagueLogo size="md" />
-                <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-amber-200/80">Турнир</p>
-                  <h1 className="mt-1 font-serif text-3xl uppercase tracking-[0.08em] md:text-4xl">Лига чемпионов</h1>
-                  <p className="mt-2 text-sm text-zinc-300">01.03.2026 - 01.09.2026</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-right sm:w-auto">
-                <div className="border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество участников</p>
-                  <p className="mt-1 text-2xl font-semibold text-zinc-100">{participants.length}</p>
-                </div>
-                <div className="border border-amber-700/40 bg-zinc-950/70 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество баллов у лидера</p>
-                  <p className="mt-1 text-2xl font-semibold text-amber-300">{sorted[0]?.totalScore ?? 0}</p>
-                </div>
-              </div>
-              <div className="mt-3">
-                <button
+  <div className="flex items-center gap-5">
+    <LeagueLogo size="md" />
+    <div>
+      <p className="text-xs uppercase tracking-[0.28em] text-amber-200/80">Турнир</p>
+      <h1 className="mt-1 font-serif text-3xl uppercase tracking-[0.08em] md:text-4xl">Лига чемпионов</h1>
+      <p className="mt-2 text-sm text-zinc-300">01.03.2026 - 01.09.2026</p>
+    </div>
+  </div>
+
+  {/* Обертка для правой части */}
+  <div className="w-full md:w-auto">
+    <div className="grid w-full grid-cols-2 gap-3 text-right md:w-auto">
+      <div className="border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество участников</p>
+        <p className="mt-1 text-2xl font-semibold text-zinc-100">{participants.length}</p>
+      </div>
+      <div className="border border-amber-700/40 bg-zinc-950/70 px-4 py-3">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Количество баллов у лидера</p>
+        <p className="mt-1 text-2xl font-semibold text-amber-300">{sorted[0]?.totalScore ?? 0}</p>
+      </div>
+    </div>
+
+    {/* Кнопка под боксами */}
+    <button
       onClick={() => setShowPointsInfo(true)}
       className="mt-3 w-full rounded border border-zinc-700 bg-zinc-900/60 px-4 py-2 text-xs font-medium tracking-[0.12em] text-zinc-200 transition-colors hover:border-amber-600 hover:text-amber-200 md:w-auto"
     >
       ИНФОРМАЦИЯ О НАЧИСЛЕНИИ БАЛЛОВ
     </button>
-              </div>
-            </div>
+  </div>
+</div>
           </header>
 
           <main className="mt-6 border border-zinc-800 bg-zinc-900/50">
