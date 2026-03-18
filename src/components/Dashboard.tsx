@@ -120,6 +120,13 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
                 </article>
               );
       // 👇 Модальное окно информации о начислении баллов
+            })}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}; // ИСПРАВЛЕНИЕ 2: Чистые скобки
 if (showPointsInfo) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8">
@@ -160,12 +167,5 @@ if (showPointsInfo) {
     </div>
   );
 }
-            })}
-          </main>
-        </div>
-      </div>
-    </div>
-  );
-}; // ИСПРАВЛЕНИЕ 2: Чистые скобки
 
 export default Dashboard;
