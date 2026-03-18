@@ -127,45 +127,49 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
     </div>
   );
 }; // ИСПРАВЛЕНИЕ 2: Чистые скобки
-if (showPointsInfo) {
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8">
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-4 border border-zinc-800 bg-zinc-900/80 px-5 py-4 md:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Информация</p>
-              <h2 className="font-serif text-2xl uppercase tracking-[0.08em] text-zinc-100">Начисление баллов</h2>
+{/* === МОДАЛЬНОЕ ОКНО === */}
+{showPointsInfo && (
+  <div
+    className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8"
+    onClick={() => setShowPointsInfo(false)}
+  >
+    <div
+      className="mx-auto max-w-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <header className="mb-4 border border-zinc-800 bg-zinc-900/80 px-5 py-4 md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Информация</p>
+            <h2 className="font-serif text-2xl uppercase tracking-[0.08em] text-zinc-100">Начисление баллов</h2>
+          </div>
+          <button
+            onClick={() => setShowPointsInfo(false)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-200 transition-colors hover:border-amber-600 hover:text-amber-200"
+          >
+            ✕
+          </button>
+        </div>
+      </header>
+
+      <div className="border border-zinc-800 bg-zinc-900/50 p-6">
+        <h3 className="mb-4 text-lg font-semibold text-zinc-100">За что начисляются баллы</h3>
+
+        <div className="space-y-3">
+          {parameters.map((param) => (
+            <div key={param.id} className="flex justify-between border-b border-zinc-800 pb-2 last:border-b-0">
+              <span className="text-zinc-300">{param.name}</span>
+              <span className="text-amber-300">{param.weight} баллов</span>
             </div>
-            <button
-              onClick={() => setShowPointsInfo(false)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-200 transition-colors hover:border-amber-600 hover:text-amber-200"
-            >
-              ✕
-            </button>
-          </div>
-        </header>
+          ))}
+        </div>
 
-        {/* 👇 СОДЕРЖИМОЕ МОДАЛКИ - ЗАПОЛНИТЕ САМИ */}
-        <div className="border border-zinc-800 bg-zinc-900/50 p-6">
-          <h3 className="mb-4 text-lg font-semibold text-zinc-100">За что начисляются баллы</h3>
-
-          <div className="space-y-3">
-            {parameters.map((param) => (
-              <div key={param.id} className="flex justify-between border-b border-zinc-800 pb-2 last:border-b-0">
-                <span className="text-zinc-300">{param.name}</span>
-                <span className="text-amber-300">{param.weight} баллов</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded border border-amber-700/40 bg-zinc-950/70 p-4">
-            <p className="text-sm text-zinc-400">Валовка: {parameters.reduce((sum, p) => sum + p.weight, 0)} баллов</p>
-          </div>
+        <div className="mt-6 rounded border border-amber-700/40 bg-zinc-950/70 p-4">
+          <p className="text-sm text-zinc-400">Валовка: {parameters.reduce((sum, p) => sum + p.weight, 0)} баллов</p>
         </div>
       </div>
     </div>
-  );
-}
+  </div>
+)}
 
 export default Dashboard;
