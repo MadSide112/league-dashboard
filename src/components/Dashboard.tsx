@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Parameter, Participant } from '../types';
 import LeagueLogo from './LeagueLogo';
 import bgImage from '../assets/back.webp'; 
@@ -13,6 +13,7 @@ const medalByRank: Record<number, string> = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
+  const [showPointsInfo, setShowPointsInfo] = useState(false);
   const sorted = [...participants].sort((a, b) => b.totalScore - a.totalScore);
   const maxScore = Math.max(...sorted.map((p) => p.totalScore), 1);
 
