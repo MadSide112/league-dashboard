@@ -22,16 +22,6 @@ function App() {
 
 useEffect(() => {
   const loadInitialData = async () => {
-    // 1. Мгновенно показываем кэш, чтобы интерфейс не "мигал"
-    const cached = localStorage.getItem('participants');
-    if (cached) {
-      try {
-        setParticipants(JSON.parse(cached));
-      } catch {
-        localStorage.removeItem('participants');
-      }
-    }
-
     // 2. Загружаем свежие данные (ТОЛЬКО ЧТЕНИЕ)
     try {
       // Используем importParticipantsFromSheet или создайте fetchParticipantsFromSheet
