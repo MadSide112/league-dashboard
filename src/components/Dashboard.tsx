@@ -98,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
                                 {item.name}: <span className={item.score < 0 ? 'text-rose-300' : 'text-amber-200'}>{item.score}</span>
                               </span>
                             ))}
-                            <span className="whitespace-nowrap text-zinc-200">Валовка: {participant.revenue.toLocaleString('ru-RU')} ₽</span>
+                            <span className="whitespace-nowrap text-zinc-200">Валовка: {participant.revenue.totalScore}</span>
                           </div>
                         </div>
                       </div>
