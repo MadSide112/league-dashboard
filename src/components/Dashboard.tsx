@@ -20,9 +20,11 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
   const maxScore = Math.max(...sorted.map((p) => p.totalScore), 1);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
-        <header className="border border-zinc-800 bg-zinc-900/70 px-6 py-6 md:px-8 md:py-7">
+    <div className="min-h-screen bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: `url(${bgImage})` }}>
+      <div className="min-h-screen bg-zinc-950/85 backdrop-blur-[2px]">
+        <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
+          <header className="border border-zinc-800 bg-zinc-900/70 px-6 py-6 md:px-8 md:py-7">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-5">
               <LeagueLogo size="md" />
