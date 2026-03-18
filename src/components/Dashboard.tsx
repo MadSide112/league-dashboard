@@ -22,7 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Объединяем наложение цвета и контент в один контейнер */}
-      <div className="min-h-screen w-full bg-zinc-950/85 backdrop-blur-[2px]">
+      <div className="min-h-screen w-full bg-zinc-950/60 backdrop-blur-[2px]">
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
           <header className="border border-zinc-800 bg-zinc-900/70 px-6 py-6 md:px-8 md:py-7">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
