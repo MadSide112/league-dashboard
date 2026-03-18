@@ -54,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
       onClick={() => setShowPointsInfo(true)}
       className="mt-3 w-full rounded border border-zinc-700 bg-zinc-900/60 px-4 py-2 text-xs font-medium tracking-[0.12em] text-zinc-200 transition-colors hover:border-amber-600 hover:text-amber-200 md:w-auto"
     >
-      ИНФОРМАЦИЯ О НАЧИСЛЕНИИ БАЛЛОВ
+      ИНФОРМАЦИЯ О НАЧИСЛЕНИИ БАЛЛОВ (в разработке)
     </button>
   </div>
 </div>
