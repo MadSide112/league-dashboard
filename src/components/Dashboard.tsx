@@ -15,6 +15,7 @@ const medalByRank: Record<number, string> = {
 const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
   const sorted = [...participants].sort((a, b) => b.totalScore - a.totalScore);
   const maxScore = Math.max(...sorted.map((p) => p.totalScore), 1);
+  const [showPointsInfo, setShowPointsInfo] = useState(false);
 
   return (
     <div 
