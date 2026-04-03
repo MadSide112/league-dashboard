@@ -46,6 +46,11 @@ function App() {
       
       try {
         logger.info('Init', 'Loading initial data from Google Sheets...');
+        const lastSync = await getLastSyncTime(CONFIG.SHEET_URL);
+        if (lastSync && isMounted) {
+        setLastSyncTime(lastSync);
+        logger.info('Init', `Last sync time: ${lastSync.toISOString()}`);
+        }
         
         const freshData = await withRetry(
           () => importParticipantsFromSheet(CONFIG.SHEET_URL, parameters),
