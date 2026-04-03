@@ -434,7 +434,7 @@ export const syncWithDatabase = async (
         monthlyBaseRevenue: 0,
       });
     }
-  });
+  };
 
   const mergedParticipants = Array.from(mergedMap.values());
 
