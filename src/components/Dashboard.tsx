@@ -225,47 +225,47 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
                     </div>
 
                     {/* Правая колонка - баллы */}
-                    <div className="col-span-12 md:col-span-4 md:text-right">
-                      <p
-                        className={`
-                          font-semibold tracking-tight
-                          transition-all duration-300
-                          ${
-                            isTop3
-                              ? 'text-6xl text-amber-300 group-hover:scale-110 group-hover:text-amber-200'
-                              : isTop5
-                              ? 'text-5xl text-amber-400 group-hover:scale-105'
-                              : 'text-5xl text-zinc-50 group-hover:text-amber-300'
-                          }
-                        `}
-                      >
-                        {participant.totalScore}
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-300">баллов</p>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        в т.ч. за выручку: {participant.revenueScore}
-                      </p>
+<div className="col-span-12 md:col-span-4 md:text-right">
+  <p
+    className={`
+      font-semibold tracking-tight
+      transition-all duration-300
+      ${
+        isTop3
+          ? 'text-6xl text-amber-300 group-hover:scale-105 group-hover:text-amber-200'  // ✅ Было scale-110
+          : isTop5
+          ? 'text-5xl text-amber-400 group-hover:scale-103'  // ✅ Было scale-105
+          : 'text-5xl text-zinc-50 group-hover:scale-102 group-hover:text-amber-300'  // ✅ Добавили минимальный scale
+      }
+    `}
+  >
+    {participant.totalScore}
+  </p>
+  <p className="mt-1 text-sm text-zinc-300">баллов</p>
+  <p className="mt-1 text-sm text-zinc-400">
+    в т.ч. за выручку: {participant.revenueScore}
+  </p>
 
-                      {/* Прогресс-бар с анимацией */}
-                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                        <div
-                          className={`
-                            h-full
-                            transition-all duration-1000 ease-out
-                            ${
-                              isTop3
-                                ? 'animate-gradient bg-gradient-to-r from-amber-600 via-amber-400 to-orange-500'
-                                : isTop5
-                                ? 'bg-gradient-to-r from-amber-700 via-amber-500 to-orange-600'
-                                : 'bg-gradient-to-r from-amber-700 via-amber-500 to-orange-700'
-                            }
-                          `}
-                          style={{
-                            width: `${Math.max(6, (participant.totalScore / maxScore) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+  {/* Прогресс-бар с анимацией */}
+  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+    <div
+      className={`
+        h-full
+        transition-all duration-1000 ease-out
+        ${
+          isTop3
+            ? 'animate-gradient bg-gradient-to-r from-amber-600 via-amber-400 to-orange-500'
+            : isTop5
+            ? 'bg-gradient-to-r from-amber-700 via-amber-500 to-orange-600'
+            : 'bg-gradient-to-r from-amber-700 via-amber-500 to-orange-700'
+        }
+      `}
+      style={{
+        width: `${Math.max(6, (participant.totalScore / maxScore) * 100)}%`,
+      }}
+    />
+  </div>
+</div>
                   </article>
                 );
               })}
