@@ -1,7 +1,7 @@
 export const CONFIG = {
   // Google Sheets
   SHEET_URL: 'https://docs.google.com/spreadsheets/d/1c7qh82G6BrGqbocCNckmCg8kPvNgv7MzmVjLM9eyeNA/edit?usp=sharing',
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxqkpJQxFEUCbB1fJAOKYKPHNa_BcoXk-uOUjNwzSIrCI0ehEgv2LeWnrrfDO4CzF-yTA/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwAJLJ_uMdrxZJMT3YVPGoB0qMu2I5lac_o2g_mFcRQCAzf0Ks7JjNp3HTbQUEGULdOqw/exec',
 
   // Sheet names
   SHEETS: {
