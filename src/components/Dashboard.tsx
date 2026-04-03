@@ -305,6 +305,13 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
               <h3 className="mb-4 text-lg font-semibold text-zinc-100">За что начисляются баллы</h3>
 
               <div className="space-y-3">
+                 <div
+            className="animate-slide-in-right flex justify-between border-b border-zinc-800 pb-2 transition-all duration-300 hover:border-amber-700 hover:bg-zinc-800/30"
+            style={{ animationDelay: '0ms' }}
+          >
+            <span className="text-zinc-300">За каждые 50 000 выручки</span>
+            <span className="font-semibold text-amber-300">5 баллов</span>
+          </div>
                 {parameters.map((param, index) => (
                   <div
                     key={param.id}
@@ -315,15 +322,6 @@ const Dashboard: React.FC<DashboardProps> = ({ participants, parameters }) => {
                     <span className="font-semibold text-amber-300">{param.weight} баллов</span>
                   </div>
                 ))}
-              </div>
-
-              <div className="animate-fade-in-up animation-delay-300 mt-6 rounded border border-amber-700/40 bg-zinc-950/70 p-4">
-                <p className="text-sm text-zinc-400">
-                  Общий вес параметров:{' '}
-                  <span className="font-semibold text-amber-300">
-                    {parameters.reduce((sum, p) => sum + p.weight, 0)} баллов
-                  </span>
-                </p>
               </div>
             </div>
           </div>
