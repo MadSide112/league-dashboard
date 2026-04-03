@@ -187,9 +187,6 @@ export const exportSnapshotToDatedSheet = async (
 
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'exportMonth',
         spreadsheetId: extractSpreadsheetId(spreadsheetUrlOrId),
@@ -252,9 +249,6 @@ export const writeSheetByName = async (
 
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'updateSheet',
         sheetName: sheetName,
@@ -279,9 +273,6 @@ export const clearSheetBody = async (
   try {
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'clearSheetBody',
         sheetName: sheetName,
