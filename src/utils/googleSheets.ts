@@ -319,7 +319,7 @@ export const syncWithDatabase = async (
   console.log(`📅 Server time: ${now.toISOString()}`);
   console.log(`📅 Current month: ${currentMonthKey}`);
 
-  editingParticipants.forEach((p: Participant) => {
+  for (const p of editingParticipants) {
     const existing = mergedMap.get(p.fullName);
     
     if (existing) {
