@@ -492,25 +492,18 @@ for (const p of editingParticipants) {
         
         if (monthChanged) {
           // 🗓️ НОВЫЙ МЕСЯЦ
-          // Фиксируем значение прошлого месяца
+          // Фиксируем значение прошлого месяца как базу
           monthlyBase[param.name] = dbValue;
-          // Итоговое = зафиксированное + новое из файла
+          // Итоговое = база + новое значение из файла
           mergedParams[param.name] = dbValue + newValue;
           
-          console.log(`  📊 ${param.name} (новый месяц): фиксируем ${dbValue}, итого ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
+          console.log(`  📊 ${param.name} (новый месяц): фиксируем базу ${dbValue}, новое ${newValue}, итого = ${mergedParams[param.name]}`);
         } else {
-          // 📅 ТОТ ЖЕ МЕСЯЦ
-          // Проверка: первая синхронизация или база не установлена
-          if (baseValue === 0 && dbValue > 0) {
-            // Инициализация: текущее значение в БД становится базой
-            monthlyBase[param.name] = dbValue;
-            mergedParams[param.name] = dbValue + newValue;
-            console.log(`  📊 ${param.name} (инициализация): база = ${dbValue}, итого ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
-          } else {
-            // Обычная логика: база + новое
-            mergedParams[param.name] = baseValue + newValue;
-            console.log(`  📊 ${param.name} (обновление): база ${baseValue} + новое ${newValue} = ${mergedParams[param.name]}`);
-          }
+          // 📅 ТОТ ЖЕ МЕСЯЦ - ПРОСТО ЗАМЕНЯЕМ!
+          // Итоговое = база месяца + новое значение (замена текущего)
+          mergedParams[param.name] = baseValue + newValue;
+          
+          console.log(`  📊 ${param.name} (тот же месяц): база ${baseValue} + новое ${newValue} = ${mergedParams[param.name]}`);
         }
       } else {
         // ✅ Обычный параметр - всегда суммируем
@@ -519,7 +512,7 @@ for (const p of editingParticipants) {
       }
     });
 
-    // ========== ОБРАБОТКА ВЫРУЧКИ ==========
+    // ========== ОБРАБОТКА ВЫРУЧКИ (АНАЛОГИЧНО) ==========
     const dbRevenue = existing.revenue || 0;
     const newRevenue = p.revenue || 0;
     
@@ -527,26 +520,18 @@ for (const p of editingParticipants) {
     
     if (monthChanged) {
       // 🗓️ НОВЫЙ МЕСЯЦ
-      // Фиксируем выручку прошлого месяца
+      // Фиксируем выручку прошлого месяца как базу
       monthlyBaseRevenue = dbRevenue;
-      // Итоговое = зафиксированное + новое
+      // Итоговое = база + новое
       mergedRevenue = dbRevenue + newRevenue;
       
-      console.log(`  💰 Выручка (новый месяц): фиксируем ${dbRevenue}, итого ${dbRevenue} + ${newRevenue} = ${mergedRevenue}`);
+      console.log(`  💰 Выручка (новый месяц): фиксируем базу ${dbRevenue}, новое ${newRevenue}, итого = ${mergedRevenue}`);
     } else {
-      // 📅 ТОТ ЖЕ МЕСЯЦ
+      // 📅 ТОТ ЖЕ МЕСЯЦ - ПРОСТО ЗАМЕНЯЕМ!
+      // Итоговое = база месяца + новое (замена текущего)
+      mergedRevenue = monthlyBaseRevenue + newRevenue;
       
-      // Проверка: первая синхронизация после внедрения системы
-      if (monthlyBaseRevenue === 0 && dbRevenue > 0) {
-        // Инициализация: текущая выручка в БД становится базой
-        monthlyBaseRevenue = dbRevenue;
-        mergedRevenue = dbRevenue + newRevenue;
-        console.log(`  💰 Выручка (инициализация): база = ${dbRevenue}, итого ${dbRevenue} + ${newRevenue} = ${mergedRevenue}`);
-      } else {
-        // Обычная логика: база + новое
-        mergedRevenue = monthlyBaseRevenue + newRevenue;
-        console.log(`  💰 Выручка (обновление): база ${monthlyBaseRevenue} + новое ${newRevenue} = ${mergedRevenue}`);
-      }
+      console.log(`  💰 Выручка (тот же месяц): база ${monthlyBaseRevenue} + новое ${newRevenue} = ${mergedRevenue}`);
     }
 
     // ========== РАСЧЁТ БАЛЛОВ ==========
@@ -576,12 +561,13 @@ for (const p of editingParticipants) {
     // ========== НОВЫЙ УЧАСТНИК ==========
     console.log(`🆕 New participant: ${p.fullName}`);
     
+    // Для нового участника база = 0, текущее значение = из файла
     mergedMap.set(p.fullName, {
       ...p,
       lastUpdated: now.toISOString(),
       currentMonth: currentMonthKey,
-      monthlyBase: {},
-      monthlyBaseRevenue: 0,
+      monthlyBase: {}, // Пустая база
+      monthlyBaseRevenue: 0, // Нулевая база выручки
     });
   }
 }
