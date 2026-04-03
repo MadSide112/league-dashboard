@@ -3,21 +3,21 @@ import { Participant, Parameter, CompetitionInfo } from './types';
 export const initialParticipants: Participant[] = [];
 
 export const initialParameters: Parameter[] = [
-  { id: '1', name: 'Сделка по вторичке/ижс', weight: 3 },
-  { id: '2', name: 'Сделка 2.0', weight: 2 },
-  { id: '3', name: 'Эксклюзивы', weight: 5 },
-  { id: '4', name: 'Сделка межрег', weight: 3 },
-  { id: '5', name: 'Реферал', weight: 5 },
-  { id: '6', name: 'Двойная сделка', weight: 5 },
-  { id: '7', name: 'ЗвБ', weight: 1 },
-  { id: '8', name: 'Бронь', weight: 2 },
-  { id: '9', name: 'Задаток', weight: 2 },
-  { id: '10', name: 'Собрание', weight: 1 },
-  { id: '11', name: 'Пост', weight: 1 },
-  { id: '12', name: 'Отзыв', weight: 1 },
-  { id: '13', name: 'Работа в департаменте', weight: 1 },
-  { id: '14', name: 'Дежурство', weight: 1 },
-  { id: '15', name: 'Нарушение регламента', weight: -1 },
+ { id: '1', name: 'Сделка по вторичке/ижс', weight: 3, shouldSum: true },
+  { id: '2', name: 'Сделка 2.0', weight: 2, shouldSum: true },
+  { id: '3', name: 'Эксклюзивы', weight: 5, shouldSum: true },
+  { id: '4', name: 'Сделка межрег', weight: 3, shouldSum: true },
+  { id: '5', name: 'Реферал', weight: 5, shouldSum: true },
+  { id: '6', name: 'Двойная сделка', weight: 5, shouldSum: true },
+  { id: '7', name: 'ЗвБ', weight: 1, shouldSum: false }, // ❌ НЕ суммируется
+  { id: '8', name: 'Бронь', weight: 2, shouldSum: false }, // ❌ НЕ суммируется
+  { id: '9', name: 'Задаток', weight: 2, shouldSum: false }, // ❌ НЕ суммируется
+  { id: '10', name: 'Собрание', weight: 1, shouldSum: true },
+  { id: '11', name: 'Пост', weight: 1, shouldSum: true },
+  { id: '12', name: 'Отзыв', weight: 1, shouldSum: true },
+  { id: '13', name: 'Работа в департаменте', weight: 1, shouldSum: true },
+  { id: '14', name: 'Дежурство', weight: 1, shouldSum: true },
+  { id: '15', name: 'Нарушение регламента', weight: -1, shouldSum: true },
 ];
 
 // Текущая формула выручки
