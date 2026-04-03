@@ -460,98 +460,131 @@ export const syncWithDatabase = async (
   
   console.log(`📅 Server time: ${now.toISOString()}`);
   console.log(`📅 Current month: ${currentMonthKey}`);
-
-  // ✅ ЗАМЕНИЛИ forEach НА for...of
-  for (const p of editingParticipants) {
-    const existing = mergedMap.get(p.fullName);
+for (const p of editingParticipants) {
+  const existing = mergedMap.get(p.fullName);
+  
+  if (existing) {
+    // ========== УЧАСТНИК УЖЕ ЕСТЬ В БАЗЕ ==========
     
-    if (existing) {
-      const lastMonthKey = existing.currentMonth || currentMonthKey;
-      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
+    const lastMonthKey = existing.currentMonth || currentMonthKey;
+    const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
+    
+    console.log(`👤 Processing ${p.fullName}:`, {
+      lastMonth: lastMonthKey,
+      currentMonth: currentMonthKey,
+      monthChanged,
+      serverTime: now.toISOString(),
+    });
+    
+    const monthlyBase = existing.monthlyBase || {};
+    let monthlyBaseRevenue = existing.monthlyBaseRevenue || 0;
+    
+    const mergedParams: Record<string, number> = {};
+    
+    // ========== ОБРАБОТКА ПАРАМЕТРОВ ==========
+    parameters.forEach((param: Parameter) => {
+      const dbValue = existing.parameters[param.name] || 0;
+      const newValue = p.parameters[param.name] || 0;
+      const baseValue = monthlyBase[param.name] || 0;
       
-      console.log(`👤 Processing ${p.fullName}:`, {
-        lastMonth: lastMonthKey,
-        currentMonth: currentMonthKey,
-        monthChanged,
-        serverTime: now.toISOString(),
-      });
-      
-      const monthlyBase = existing.monthlyBase || {};
-      let monthlyBaseRevenue = existing.monthlyBaseRevenue || 0;
-      
-      const mergedParams: Record<string, number> = {};
-      
-      parameters.forEach((param: Parameter) => {
-        const dbValue = existing.parameters[param.name] || 0;
-        const newValue = p.parameters[param.name] || 0;
-        const baseValue = monthlyBase[param.name] || 0;
+      if (param.shouldSum === false) {
+        // ❌ Параметр НЕ суммируется (ЗвБ, Бронь, Задаток)
         
-        if (param.shouldSum === false) {
-          if (monthChanged) {
+        if (monthChanged) {
+          // 🗓️ НОВЫЙ МЕСЯЦ
+          // Фиксируем значение прошлого месяца
+          monthlyBase[param.name] = dbValue;
+          // Итоговое = зафиксированное + новое из файла
+          mergedParams[param.name] = dbValue + newValue;
+          
+          console.log(`  📊 ${param.name} (новый месяц): фиксируем ${dbValue}, итого ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
+        } else {
+          // 📅 ТОТ ЖЕ МЕСЯЦ
+          // Проверка: первая синхронизация или база не установлена
+          if (baseValue === 0 && dbValue > 0) {
+            // Инициализация: текущее значение в БД становится базой
             monthlyBase[param.name] = dbValue;
             mergedParams[param.name] = dbValue + newValue;
-            console.log(`  📊 ${param.name}: база ${dbValue} + новое ${newValue} = ${mergedParams[param.name]}`);
+            console.log(`  📊 ${param.name} (инициализация): база = ${dbValue}, итого ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
           } else {
+            // Обычная логика: база + новое
             mergedParams[param.name] = baseValue + newValue;
-            console.log(`  📊 ${param.name}: база месяца ${baseValue} + текущее ${newValue} = ${mergedParams[param.name]}`);
+            console.log(`  📊 ${param.name} (обновление): база ${baseValue} + новое ${newValue} = ${mergedParams[param.name]}`);
           }
-        } else {
-          mergedParams[param.name] = dbValue + newValue;
-          console.log(`  ➕ ${param.name}: ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
         }
-      });
+      } else {
+        // ✅ Обычный параметр - всегда суммируем
+        mergedParams[param.name] = dbValue + newValue;
+        console.log(`  ➕ ${param.name}: ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
+      }
+    });
 
-      const dbRevenue = existing.revenue || 0;
-      const newRevenue = p.revenue || 0;
+    // ========== ОБРАБОТКА ВЫРУЧКИ ==========
+    const dbRevenue = existing.revenue || 0;
+    const newRevenue = p.revenue || 0;
+    
+    let mergedRevenue: number;
+    
+    if (monthChanged) {
+      // 🗓️ НОВЫЙ МЕСЯЦ
+      // Фиксируем выручку прошлого месяца
+      monthlyBaseRevenue = dbRevenue;
+      // Итоговое = зафиксированное + новое
+      mergedRevenue = dbRevenue + newRevenue;
       
-      let mergedRevenue: number;
-      if (monthChanged) {
+      console.log(`  💰 Выручка (новый месяц): фиксируем ${dbRevenue}, итого ${dbRevenue} + ${newRevenue} = ${mergedRevenue}`);
+    } else {
+      // 📅 ТОТ ЖЕ МЕСЯЦ
+      
+      // Проверка: первая синхронизация после внедрения системы
+      if (monthlyBaseRevenue === 0 && dbRevenue > 0) {
+        // Инициализация: текущая выручка в БД становится базой
         monthlyBaseRevenue = dbRevenue;
         mergedRevenue = dbRevenue + newRevenue;
-        console.log(`  💰 Выручка (новый месяц): БД ${dbRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
+        console.log(`  💰 Выручка (инициализация): база = ${dbRevenue}, итого ${dbRevenue} + ${newRevenue} = ${mergedRevenue}`);
       } else {
-        if (monthlyBaseRevenue === 0 && dbRevenue > 0) {
-          monthlyBaseRevenue = dbRevenue;
-          mergedRevenue = dbRevenue + newRevenue;
-          console.log(`  💰 Выручка (первая синхронизация): БД ${dbRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
-        } else {
-          mergedRevenue = monthlyBaseRevenue + newRevenue;
-          console.log(`  💰 Выручка (тот же месяц): база ${monthlyBaseRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
-        }
+        // Обычная логика: база + новое
+        mergedRevenue = monthlyBaseRevenue + newRevenue;
+        console.log(`  💰 Выручка (обновление): база ${monthlyBaseRevenue} + новое ${newRevenue} = ${mergedRevenue}`);
       }
-
-      const mergedRevenueScore = Math.floor(mergedRevenue / 50000) * REVENUE_POINTS_PER_50000;
-
-      let paramsScore = 0;
-      parameters.forEach((param: Parameter) => {
-        paramsScore += mergedParams[param.name] * param.weight;
-      });
-
-      mergedMap.set(p.fullName, {
-        ...existing,
-        parameters: mergedParams,
-        revenue: mergedRevenue,
-        revenueScore: mergedRevenueScore,
-        totalScore: paramsScore + mergedRevenueScore,
-        lastUpdated: now.toISOString(),
-        currentMonth: currentMonthKey,
-        monthlyBase: monthlyBase,
-        monthlyBaseRevenue: monthlyBaseRevenue,
-      });
-      
-      console.log(`  ✅ Total score: ${paramsScore + mergedRevenueScore}`);
-    } else {
-      console.log(`🆕 New participant: ${p.fullName}`);
-      
-      mergedMap.set(p.fullName, {
-        ...p,
-        lastUpdated: now.toISOString(),
-        currentMonth: currentMonthKey,
-        monthlyBase: {},
-        monthlyBaseRevenue: 0,
-      });
     }
+
+    // ========== РАСЧЁТ БАЛЛОВ ==========
+    const mergedRevenueScore = Math.floor(mergedRevenue / 50000) * REVENUE_POINTS_PER_50000;
+
+    let paramsScore = 0;
+    parameters.forEach((param: Parameter) => {
+      paramsScore += mergedParams[param.name] * param.weight;
+    });
+
+    // ========== СОХРАНЕНИЕ ==========
+    mergedMap.set(p.fullName, {
+      ...existing,
+      parameters: mergedParams,
+      revenue: mergedRevenue,
+      revenueScore: mergedRevenueScore,
+      totalScore: paramsScore + mergedRevenueScore,
+      lastUpdated: now.toISOString(),
+      currentMonth: currentMonthKey,
+      monthlyBase: monthlyBase,
+      monthlyBaseRevenue: monthlyBaseRevenue,
+    });
+    
+    console.log(`  ✅ Total score: ${paramsScore + mergedRevenueScore}`);
+    
+  } else {
+    // ========== НОВЫЙ УЧАСТНИК ==========
+    console.log(`🆕 New participant: ${p.fullName}`);
+    
+    mergedMap.set(p.fullName, {
+      ...p,
+      lastUpdated: now.toISOString(),
+      currentMonth: currentMonthKey,
+      monthlyBase: {},
+      monthlyBaseRevenue: 0,
+    });
   }
+}
 
   const mergedParticipants = Array.from(mergedMap.values());
 
