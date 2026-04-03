@@ -432,5 +432,125 @@ export const syncWithDatabase = async (
   console.log('✅ Sync complete!');
   return mergedParticipants;
 };
+// ========== SYSTEM SETTINGS (глобальные настройки) ==========
+
+export const getSystemSetting = async (
+  spreadsheetUrlOrId: string,
+  key: string
+): Promise<string | null> => {
+  try {
+    const spreadsheetId = extractSpreadsheetId(spreadsheetUrlOrId);
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=System`;
+    
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      console.warn('System sheet not found');
+      return null;
+    }
+
+    const csvText = await response.text();
+    const parsed = Papa.parse<Record<string, string>>(csvText, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    const row = parsed.data.find((r: any) => r.key === key);
+    return row?.value || null;
+  } catch (error) {
+    console.error('Error reading system setting:', error);
+    return null;
+  }
+};
+
+export const setSystemSetting = async (
+  spreadsheetUrlOrId: string,
+  key: string,
+  value: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const spreadsheetId = extractSpreadsheetId(spreadsheetUrlOrId);
+    
+    // Читаем текущие настройки
+    let currentSettings: Array<[string, string]> = [];
+    
+    try {
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=System`;
+      const response = await fetch(csvUrl);
+      if (response.ok) {
+        const csvText = await response.text();
+        const parsed = Papa.parse<Record<string, string>>(csvText, {
+          header: true,
+          skipEmptyLines: true,
+        });
+        
+        currentSettings = parsed.data.map((r: any) => [r.key, r.value]);
+      }
+    } catch {
+      // Лист пуст или не существует
+    }
+
+    // Обновляем или добавляем значение
+    const existingIndex = currentSettings.findIndex(([k]) => k === key);
+    if (existingIndex >= 0) {
+      currentSettings[existingIndex][1] = value;
+    } else {
+      currentSettings.push([key, value]);
+    }
+
+    // Формируем данные для записи
+    const rows = [
+      ['key', 'value'],
+      ...currentSettings,
+    ];
+
+    // Отправляем запрос на обновление
+    const response = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'updateSheet',
+        sheetName: 'System',
+        rows: rows,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to set system setting');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting system setting:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+export const getLastSyncTime = async (
+  spreadsheetUrlOrId: string
+): Promise<Date | null> => {
+  const timeString = await getSystemSetting(spreadsheetUrlOrId, 'lastSyncTime');
+  if (!timeString) return null;
+  
+  try {
+    return new Date(timeString);
+  } catch {
+    return null;
+  }
+};
+
+export const setLastSyncTime = async (
+  spreadsheetUrlOrId: string,
+  date: Date
+): Promise<{ success: boolean; error?: string }> => {
+  return setSystemSetting(spreadsheetUrlOrId, 'lastSyncTime', date.toISOString());
+};
 
 export { GAS_WEB_APP_URL };
