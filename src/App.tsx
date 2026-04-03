@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
 import PasswordProtectedPanel from './components/PasswordProtectedPanel';
 import LogsViewer from './components/LogsViewer';
-import { importParticipantsFromSheet, exportSnapshotToDatedSheet, syncWithDatabase } from './utils/googleSheets';
+import { importParticipantsFromSheet, exportSnapshotToDatedSheet, syncWithDatabase, getLastSyncTime } from './utils/googleSheets';
 import { logger } from './utils/logger';
 import { useToast } from './components/Toast';
 import { usePersistedParticipants } from './hooks/usePersistedParticipants';
