@@ -429,6 +429,9 @@ export const syncWithDatabase = async (
   console.log(`💾 Writing ${mergedParticipants.length} participants to database`);
   await writeSheetByName(spreadsheetUrlOrId, 'База данных', mergedParticipants, parameters);
 
+  console.log('🕐 Saving sync time to Google Sheets...');
+  await setLastSyncTime(spreadsheetUrlOrId, now);
+  
   console.log('✅ Sync complete!');
   return mergedParticipants;
 };
