@@ -42,6 +42,35 @@ const hasMonthChanged = (lastMonthKey: string | undefined, currentMonthKey: stri
   return lastMonthKey !== currentMonthKey;
 };
 
+// Получить серверное время из Google Apps Script
+export const getServerTime = async (): Promise<Date> => {
+  try {
+    const response = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getServerTime',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error('Failed to get server time');
+    }
+
+    console.log('🕐 Server time received:', result.serverTime);
+    return new Date(result.serverTime);
+  } catch (error) {
+    console.warn('⚠️ Failed to get server time, using local time:', error);
+    // Fallback на локальное время
+    return new Date();
+  }
+};
+
 // ========== ЗАГРУЗКА ДАННЫХ ИЗ ЛИСТА ==========
 
 const loadParticipantsFromSheetName = async (
@@ -289,166 +318,6 @@ export const clearSheetBody = async (
   }
 };
 
-// ========== ✅ ГЛАВНАЯ ФУНКЦИЯ СИНХРОНИЗАЦИИ ==========
-
-export const syncWithDatabase = async (
-  spreadsheetUrlOrId: string,
-  parameters: Parameter[]
-): Promise<Participant[]> => {
-  console.log('🔄 Starting sync...');
-  
-  // Step 1: Читаем базу данных
-  const dbParticipants = await readDatabaseSheet(spreadsheetUrlOrId, parameters);
-  console.log(`📖 Loaded ${dbParticipants.length} participants from database`);
-
-  // Step 2: Читаем файл редактирования
-  const editingParticipants = await importFromEditingFile(spreadsheetUrlOrId, parameters);
-  console.log(`📝 Loaded ${editingParticipants.length} participants from editing file`);
-
-  // Step 3: Мерджим данные
-  const mergedMap = new Map<string, Participant>();
-
-  // Добавляем участников из базы
-  dbParticipants.forEach((p: Participant) => {
-    mergedMap.set(p.fullName, { ...p });
-  });
-
-   const now = await getServerTime();
-  const currentMonthKey = getMonthKey(now);
-  
-  console.log(`📅 Server time: ${now.toISOString()}`);
-  console.log(`📅 Current month: ${currentMonthKey}`);
-
-  for (const p of editingParticipants) {
-    const existing = mergedMap.get(p.fullName);
-    
-    if (existing) {
-      const lastMonthKey = existing.currentMonth || currentMonthKey;
-      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
-      
-      console.log(`👤 Processing ${p.fullName}:`, {
-        lastMonth: lastMonthKey,
-        currentMonth: currentMonthKey,
-        monthChanged,
-        serverTime: now.toISOString(),
-      });
-    
-    if (existing) {
-      // ========== УЧАСТНИК УЖЕ ЕСТЬ В БАЗЕ ==========
-      
-      const lastMonthKey = existing.currentMonth || currentMonthKey;
-      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
-      
-      console.log(`👤 Processing ${p.fullName}:`, {
-        lastMonth: lastMonthKey,
-        currentMonth: currentMonthKey,
-        monthChanged,
-      });
-      
-      // Инициализируем базу на начало месяца, если её нет
-      const monthlyBase = existing.monthlyBase || {};
-      let monthlyBaseRevenue = existing.monthlyBaseRevenue || 0;
-      
-      const mergedParams: Record<string, number> = {};
-      
-      // Обрабатываем каждый параметр
-      parameters.forEach((param: Parameter) => {
-        const dbValue = existing.parameters[param.name] || 0;
-        const newValue = p.parameters[param.name] || 0;
-        const baseValue = monthlyBase[param.name] || 0;
-        
-        if (param.shouldSum === false) {
-          // ❌ Параметр НЕ суммируется (ЗвБ, Бронь, Задаток)
-          
-          if (monthChanged) {
-            // 🗓️ НОВЫЙ МЕСЯЦ
-            // Сохраняем текущее значение как базу для нового месяца
-            monthlyBase[param.name] = dbValue;
-            // Итоговое значение = база + новое значение из файла
-            mergedParams[param.name] = dbValue + newValue;
-            
-            console.log(`  📊 ${param.name}: база ${dbValue} + новое ${newValue} = ${mergedParams[param.name]}`);
-          } else {
-            // 📅 ТОТ ЖЕ МЕСЯЦ
-            // Итоговое значение = база на начало месяца + текущее значение
-            mergedParams[param.name] = baseValue + newValue;
-            
-            console.log(`  📊 ${param.name}: база месяца ${baseValue} + текущее ${newValue} = ${mergedParams[param.name]}`);
-          }
-        } else {
-          // ✅ Обычный параметр - всегда суммируем
-          mergedParams[param.name] = dbValue + newValue;
-          
-          console.log(`  ➕ ${param.name}: ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
-        }
-      });
-
-      // Обрабатываем выручку (та же логика)
-      const dbRevenue = existing.revenue || 0;
-      const newRevenue = p.revenue || 0;
-      
-      let mergedRevenue: number;
-      if (monthChanged) {
-        // 🗓️ НОВЫЙ МЕСЯЦ - сохраняем базу и суммируем
-        monthlyBaseRevenue = dbRevenue;
-        mergedRevenue = dbRevenue + newRevenue;
-        
-        console.log(`  💰 Выручка: база ${dbRevenue} + новое ${newRevenue} = ${mergedRevenue}`);
-      } else {
-        // 📅 ТОТ ЖЕ МЕСЯЦ - база + текущее
-        mergedRevenue = monthlyBaseRevenue + newRevenue;
-        
-        console.log(`  💰 Выручка: база месяца ${monthlyBaseRevenue} + текущее ${newRevenue} = ${mergedRevenue}`);
-      }
-
-      const mergedRevenueScore = Math.floor(mergedRevenue / 50000) * REVENUE_POINTS_PER_50000;
-
-      // Пересчитываем общий балл
-      let paramsScore = 0;
-      parameters.forEach((param: Parameter) => {
-        paramsScore += mergedParams[param.name] * param.weight;
-      });
-
-      mergedMap.set(p.fullName, {
-        ...existing,
-        parameters: mergedParams,
-        revenue: mergedRevenue,
-        revenueScore: mergedRevenueScore,
-        totalScore: paramsScore + mergedRevenueScore,
-        lastUpdated: now.toISOString(),
-        currentMonth: currentMonthKey,
-        monthlyBase: monthlyBase,
-        monthlyBaseRevenue: monthlyBaseRevenue,
-      });
-      
-      console.log(`  ✅ Total score: ${paramsScore + mergedRevenueScore}`);
-    } else {
-      // ========== НОВЫЙ УЧАСТНИК ==========
-      console.log(`🆕 New participant: ${p.fullName}`);
-      
-      mergedMap.set(p.fullName, {
-        ...p,
-        lastUpdated: now.toISOString(),
-        currentMonth: currentMonthKey,
-        monthlyBase: {},
-        monthlyBaseRevenue: 0,
-      });
-    }
-  };
-
-  const mergedParticipants = Array.from(mergedMap.values());
-
-  // Step 4: Записываем обратно в базу данных
-  console.log(`💾 Writing ${mergedParticipants.length} participants to database`);
-  await writeSheetByName(spreadsheetUrlOrId, 'База данных', mergedParticipants, parameters);
-
-  console.log('🕐 Saving sync time to Google Sheets...');
-  await setLastSyncTime(spreadsheetUrlOrId, NewDate());
-
-    
-  console.log('✅ Sync complete!');
-  return mergedParticipants;
-};
 // ========== SYSTEM SETTINGS (глобальные настройки) ==========
 
 export const getSystemSetting = async (
@@ -487,7 +356,6 @@ export const setSystemSetting = async (
   try {
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrlOrId);
     
-    // Читаем текущие настройки
     let currentSettings: Array<[string, string]> = [];
     
     try {
@@ -506,7 +374,6 @@ export const setSystemSetting = async (
       // Лист пуст или не существует
     }
 
-    // Обновляем или добавляем значение
     const existingIndex = currentSettings.findIndex(([k]) => k === key);
     if (existingIndex >= 0) {
       currentSettings[existingIndex][1] = value;
@@ -514,13 +381,11 @@ export const setSystemSetting = async (
       currentSettings.push([key, value]);
     }
 
-    // Формируем данные для записи
     const rows = [
       ['key', 'value'],
       ...currentSettings,
     ];
 
-    // Отправляем запрос на обновление
     const response = await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       body: JSON.stringify({
@@ -570,31 +435,134 @@ export const setLastSyncTime = async (
   return setSystemSetting(spreadsheetUrlOrId, 'lastSyncTime', date.toISOString());
 };
 
-// Получить серверное время из Google Apps Script
-export const getServerTime = async (): Promise<Date> => {
-  try {
-    const response = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'getServerTime',
-      }),
-    });
+// ========== ✅ ГЛАВНАЯ ФУНКЦИЯ СИНХРОНИЗАЦИИ ==========
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+export const syncWithDatabase = async (
+  spreadsheetUrlOrId: string,
+  parameters: Parameter[]
+): Promise<Participant[]> => {
+  console.log('🔄 Starting sync...');
+  
+  const dbParticipants = await readDatabaseSheet(spreadsheetUrlOrId, parameters);
+  console.log(`📖 Loaded ${dbParticipants.length} participants from database`);
+
+  const editingParticipants = await importFromEditingFile(spreadsheetUrlOrId, parameters);
+  console.log(`📝 Loaded ${editingParticipants.length} participants from editing file`);
+
+  const mergedMap = new Map<string, Participant>();
+
+  dbParticipants.forEach((p: Participant) => {
+    mergedMap.set(p.fullName, { ...p });
+  });
+
+  const now = await getServerTime();
+  const currentMonthKey = getMonthKey(now);
+  
+  console.log(`📅 Server time: ${now.toISOString()}`);
+  console.log(`📅 Current month: ${currentMonthKey}`);
+
+  // ✅ ЗАМЕНИЛИ forEach НА for...of
+  for (const p of editingParticipants) {
+    const existing = mergedMap.get(p.fullName);
+    
+    if (existing) {
+      const lastMonthKey = existing.currentMonth || currentMonthKey;
+      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
+      
+      console.log(`👤 Processing ${p.fullName}:`, {
+        lastMonth: lastMonthKey,
+        currentMonth: currentMonthKey,
+        monthChanged,
+        serverTime: now.toISOString(),
+      });
+      
+      const monthlyBase = existing.monthlyBase || {};
+      let monthlyBaseRevenue = existing.monthlyBaseRevenue || 0;
+      
+      const mergedParams: Record<string, number> = {};
+      
+      parameters.forEach((param: Parameter) => {
+        const dbValue = existing.parameters[param.name] || 0;
+        const newValue = p.parameters[param.name] || 0;
+        const baseValue = monthlyBase[param.name] || 0;
+        
+        if (param.shouldSum === false) {
+          if (monthChanged) {
+            monthlyBase[param.name] = dbValue;
+            mergedParams[param.name] = dbValue + newValue;
+            console.log(`  📊 ${param.name}: база ${dbValue} + новое ${newValue} = ${mergedParams[param.name]}`);
+          } else {
+            mergedParams[param.name] = baseValue + newValue;
+            console.log(`  📊 ${param.name}: база месяца ${baseValue} + текущее ${newValue} = ${mergedParams[param.name]}`);
+          }
+        } else {
+          mergedParams[param.name] = dbValue + newValue;
+          console.log(`  ➕ ${param.name}: ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
+        }
+      });
+
+      const dbRevenue = existing.revenue || 0;
+      const newRevenue = p.revenue || 0;
+      
+      let mergedRevenue: number;
+      if (monthChanged) {
+        monthlyBaseRevenue = dbRevenue;
+        mergedRevenue = dbRevenue + newRevenue;
+        console.log(`  💰 Выручка (новый месяц): БД ${dbRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
+      } else {
+        if (monthlyBaseRevenue === 0 && dbRevenue > 0) {
+          monthlyBaseRevenue = dbRevenue;
+          mergedRevenue = dbRevenue + newRevenue;
+          console.log(`  💰 Выручка (первая синхронизация): БД ${dbRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
+        } else {
+          mergedRevenue = monthlyBaseRevenue + newRevenue;
+          console.log(`  💰 Выручка (тот же месяц): база ${monthlyBaseRevenue} + файл ${newRevenue} = ${mergedRevenue}`);
+        }
+      }
+
+      const mergedRevenueScore = Math.floor(mergedRevenue / 50000) * REVENUE_POINTS_PER_50000;
+
+      let paramsScore = 0;
+      parameters.forEach((param: Parameter) => {
+        paramsScore += mergedParams[param.name] * param.weight;
+      });
+
+      mergedMap.set(p.fullName, {
+        ...existing,
+        parameters: mergedParams,
+        revenue: mergedRevenue,
+        revenueScore: mergedRevenueScore,
+        totalScore: paramsScore + mergedRevenueScore,
+        lastUpdated: now.toISOString(),
+        currentMonth: currentMonthKey,
+        monthlyBase: monthlyBase,
+        monthlyBaseRevenue: monthlyBaseRevenue,
+      });
+      
+      console.log(`  ✅ Total score: ${paramsScore + mergedRevenueScore}`);
+    } else {
+      console.log(`🆕 New participant: ${p.fullName}`);
+      
+      mergedMap.set(p.fullName, {
+        ...p,
+        lastUpdated: now.toISOString(),
+        currentMonth: currentMonthKey,
+        monthlyBase: {},
+        monthlyBaseRevenue: 0,
+      });
     }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error('Failed to get server time');
-    }
-
-    return new Date(result.serverTime);
-  } catch (error) {
-    console.warn('Failed to get server time, using local time:', error);
-    // Fallback на локальное время
-    return new Date();
   }
+
+  const mergedParticipants = Array.from(mergedMap.values());
+
+  console.log(`💾 Writing ${mergedParticipants.length} participants to database`);
+  await writeSheetByName(spreadsheetUrlOrId, 'База данных', mergedParticipants, parameters);
+
+  console.log('🕐 Saving sync time to Google Sheets...');
+  await setLastSyncTime(spreadsheetUrlOrId, now);
+    
+  console.log('✅ Sync complete!');
+  return mergedParticipants;
 };
+
 export { GAS_WEB_APP_URL };
