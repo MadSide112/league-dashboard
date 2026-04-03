@@ -153,6 +153,17 @@
 .animation-delay-500 {
   animation-delay: 500ms;
 }
+.group-hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.group-hover\:scale-103:hover {
+  transform: scale(1.03);
+}
+
+.group-hover\:scale-105:hover {
+  transform: scale(1.05);
+}
 
 @layer components {
   .panel {
