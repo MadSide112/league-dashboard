@@ -3,8 +3,9 @@ import { Parameter, Participant } from '../types';
 
 const REVENUE_POINTS_PER_50000 = 5;
 
-// Google Apps Script Web App URL for write operations
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz_evcY2kTxVGU3bNV-J-83txC7HPyGbiVpUKnFWv7yAQPrXWJ2n038AD_z2gOjTFWWag/exec';
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 const parseNumericValue = (value: unknown): number => {
   if (typeof value === 'number') {
@@ -15,13 +16,33 @@ const parseNumericValue = (value: unknown): number => {
     return 0;
   }
 
-  // Remove spaces and currency symbols to support values like "1 199 403 ₽"
-  const normalized = value.replace(/\s/g, '').replace(/[^\d,-.]/g, '').replace(',', '.');
-  const parsed = Number(normalized);
+  if (!value.trim()) {
+    return 0;
+  }
+
+  const normalized = value
+    .replace(/[^\d,.-]/g, '')
+    .replace(',', '.');
+
+  const parsed = parseFloat(normalized);
+  
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const normalizeHeader = (header: string): string => header.trim();
+
+// Получить ключ месяца в формате YYYY-MM
+const getMonthKey = (date: Date): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+
+// Проверка смены месяца
+const hasMonthChanged = (lastMonthKey: string | undefined, currentMonthKey: string): boolean => {
+  if (!lastMonthKey) return false;
+  return lastMonthKey !== currentMonthKey;
+};
+
+// ========== ЗАГРУЗКА ДАННЫХ ИЗ ЛИСТА ==========
 
 const loadParticipantsFromSheetName = async (
   spreadsheetId: string,
@@ -31,6 +52,7 @@ const loadParticipantsFromSheetName = async (
 ): Promise<Participant[]> => {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const response = await fetch(csvUrl);
+  
   if (!response.ok) {
     throw new Error(`Не удалось получить данные из листа "${sheetName}".`);
   }
@@ -73,6 +95,21 @@ const loadParticipantsFromSheetName = async (
       const revenue = parseNumericValue(normalizedRow['Выручка']);
       const revenueScore = Math.floor(revenue / 50000) * REVENUE_POINTS_PER_50000;
 
+      // Дополнительные поля из таблицы (если есть)
+      const lastUpdated = normalizedRow['lastUpdated'] || undefined;
+      const currentMonth = normalizedRow['currentMonth'] || undefined;
+      const monthlyBaseRevenue = parseNumericValue(normalizedRow['monthlyBaseRevenue']);
+
+      // Парсим monthlyBase (JSON в строке)
+      let monthlyBase: { [key: string]: number } = {};
+      if (normalizedRow['monthlyBase']) {
+        try {
+          monthlyBase = JSON.parse(normalizedRow['monthlyBase']);
+        } catch {
+          monthlyBase = {};
+        }
+      }
+
       return {
         id: `${idPrefix}-${Date.now()}-${index}`,
         fullName,
@@ -80,10 +117,16 @@ const loadParticipantsFromSheetName = async (
         revenue,
         revenueScore,
         totalScore: paramsScore + revenueScore,
+        lastUpdated,
+        currentMonth,
+        monthlyBase,
+        monthlyBaseRevenue,
       } satisfies Participant;
     })
     .filter((participant: Participant | null): participant is Participant => participant !== null);
 };
+
+// ========== ЭКСПОРТ ФУНКЦИЙ ==========
 
 export const extractSpreadsheetId = (input: string): string => {
   const trimmed = input.trim();
@@ -112,7 +155,6 @@ export const importParticipantsFromSheet = async (
   }
 };
 
-// Import from "Файл редактирования" sheet by name to avoid gid dependence
 export const importFromEditingFile = async (
   spreadsheetUrlOrId: string,
   parameters: Parameter[]
@@ -125,7 +167,6 @@ export const importFromEditingFile = async (
   }
 };
 
-// Export snapshot to a new dated sheet via Google Apps Script
 export const exportSnapshotToDatedSheet = async (
   spreadsheetUrlOrId: string,
   participants: Participant[],
@@ -146,7 +187,6 @@ export const exportSnapshotToDatedSheet = async (
 
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -167,7 +207,6 @@ export const exportSnapshotToDatedSheet = async (
   }
 };
 
-// Read data from "База данных" sheet (gid=0)
 export const readDatabaseSheet = async (
   spreadsheetUrlOrId: string,
   parameters: Parameter[]
@@ -181,7 +220,6 @@ export const readDatabaseSheet = async (
   }
 };
 
-// Write data to a sheet via Google Apps Script
 export const writeSheetByName = async (
   _spreadsheetUrlOrId: string,
   sheetName: string,
@@ -189,20 +227,31 @@ export const writeSheetByName = async (
   parameters: Parameter[]
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Build rows with headers
-    const headers = ['ФИО', ...parameters.map(p => p.name), 'Выручка'];
+    const headers = [
+      'ФИО',
+      ...parameters.map(p => p.name),
+      'Выручка',
+      'lastUpdated',
+      'currentMonth',
+      'monthlyBase',
+      'monthlyBaseRevenue',
+    ];
+    
     const rows = [
       headers,
       ...participants.map(p => [
         p.fullName,
         ...parameters.map(param => p.parameters[param.name] || 0),
         p.revenue,
+        p.lastUpdated || '',
+        p.currentMonth || '',
+        JSON.stringify(p.monthlyBase || {}),
+        p.monthlyBaseRevenue || 0,
       ]),
     ];
 
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -223,7 +272,6 @@ export const writeSheetByName = async (
   }
 };
 
-// Clear sheet body (keep headers) via Google Apps Script
 export const clearSheetBody = async (
   _spreadsheetUrlOrId: string,
   sheetName: string
@@ -231,7 +279,6 @@ export const clearSheetBody = async (
   try {
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -251,37 +298,108 @@ export const clearSheetBody = async (
   }
 };
 
-// Sync: Read from both sheets, sum values, write back to "База данных"
+// ========== ✅ ГЛАВНАЯ ФУНКЦИЯ СИНХРОНИЗАЦИИ ==========
+
 export const syncWithDatabase = async (
   spreadsheetUrlOrId: string,
   parameters: Parameter[]
 ): Promise<Participant[]> => {
-  // Step 1: Read "База данных" (existing totals)
+  console.log('🔄 Starting sync...');
+  
+  // Step 1: Читаем базу данных
   const dbParticipants = await readDatabaseSheet(spreadsheetUrlOrId, parameters);
+  console.log(`📖 Loaded ${dbParticipants.length} participants from database`);
 
-  // Step 2: Read "Файл редактирования" (new data to add)
+  // Step 2: Читаем файл редактирования
   const editingParticipants = await importFromEditingFile(spreadsheetUrlOrId, parameters);
+  console.log(`📝 Loaded ${editingParticipants.length} participants from editing file`);
 
-  // Step 3: Merge by ФИО (sum values)
+  // Step 3: Мерджим данные
   const mergedMap = new Map<string, Participant>();
 
-  // Add existing database participants
+  // Добавляем участников из базы
   dbParticipants.forEach((p: Participant) => {
     mergedMap.set(p.fullName, { ...p });
   });
 
-  // Add/edit with editing file participants
+  const now = new Date();
+  const currentMonthKey = getMonthKey(now);
+
+  // Обрабатываем участников из файла редактирования
   editingParticipants.forEach((p: Participant) => {
     const existing = mergedMap.get(p.fullName);
+    
     if (existing) {
+      // ========== УЧАСТНИК УЖЕ ЕСТЬ В БАЗЕ ==========
+      
+      const lastMonthKey = existing.currentMonth || currentMonthKey;
+      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
+      
+      console.log(`👤 Processing ${p.fullName}:`, {
+        lastMonth: lastMonthKey,
+        currentMonth: currentMonthKey,
+        monthChanged,
+      });
+      
+      // Инициализируем базу на начало месяца, если её нет
+      const monthlyBase = existing.monthlyBase || {};
+      let monthlyBaseRevenue = existing.monthlyBaseRevenue || 0;
+      
       const mergedParams: Record<string, number> = {};
+      
+      // Обрабатываем каждый параметр
       parameters.forEach((param: Parameter) => {
-        mergedParams[param.name] = (existing.parameters[param.name] || 0) + (p.parameters[param.name] || 0);
+        const dbValue = existing.parameters[param.name] || 0;
+        const newValue = p.parameters[param.name] || 0;
+        const baseValue = monthlyBase[param.name] || 0;
+        
+        if (param.shouldSum === false) {
+          // ❌ Параметр НЕ суммируется (ЗвБ, Бронь, Задаток)
+          
+          if (monthChanged) {
+            // 🗓️ НОВЫЙ МЕСЯЦ
+            // Сохраняем текущее значение как базу для нового месяца
+            monthlyBase[param.name] = dbValue;
+            // Итоговое значение = база + новое значение из файла
+            mergedParams[param.name] = dbValue + newValue;
+            
+            console.log(`  📊 ${param.name}: база ${dbValue} + новое ${newValue} = ${mergedParams[param.name]}`);
+          } else {
+            // 📅 ТОТ ЖЕ МЕСЯЦ
+            // Итоговое значение = база на начало месяца + текущее значение
+            mergedParams[param.name] = baseValue + newValue;
+            
+            console.log(`  📊 ${param.name}: база месяца ${baseValue} + текущее ${newValue} = ${mergedParams[param.name]}`);
+          }
+        } else {
+          // ✅ Обычный параметр - всегда суммируем
+          mergedParams[param.name] = dbValue + newValue;
+          
+          console.log(`  ➕ ${param.name}: ${dbValue} + ${newValue} = ${mergedParams[param.name]}`);
+        }
       });
 
-      const mergedRevenue = existing.revenue + p.revenue;
+      // Обрабатываем выручку (та же логика)
+      const dbRevenue = existing.revenue || 0;
+      const newRevenue = p.revenue || 0;
+      
+      let mergedRevenue: number;
+      if (monthChanged) {
+        // 🗓️ НОВЫЙ МЕСЯЦ - сохраняем базу и суммируем
+        monthlyBaseRevenue = dbRevenue;
+        mergedRevenue = dbRevenue + newRevenue;
+        
+        console.log(`  💰 Выручка: база ${dbRevenue} + новое ${newRevenue} = ${mergedRevenue}`);
+      } else {
+        // 📅 ТОТ ЖЕ МЕСЯЦ - база + текущее
+        mergedRevenue = monthlyBaseRevenue + newRevenue;
+        
+        console.log(`  💰 Выручка: база месяца ${monthlyBaseRevenue} + текущее ${newRevenue} = ${mergedRevenue}`);
+      }
+
       const mergedRevenueScore = Math.floor(mergedRevenue / 50000) * REVENUE_POINTS_PER_50000;
 
+      // Пересчитываем общий балл
       let paramsScore = 0;
       parameters.forEach((param: Parameter) => {
         paramsScore += mergedParams[param.name] * param.weight;
@@ -293,20 +411,35 @@ export const syncWithDatabase = async (
         revenue: mergedRevenue,
         revenueScore: mergedRevenueScore,
         totalScore: paramsScore + mergedRevenueScore,
+        lastUpdated: now.toISOString(),
+        currentMonth: currentMonthKey,
+        monthlyBase: monthlyBase,
+        monthlyBaseRevenue: monthlyBaseRevenue,
       });
+      
+      console.log(`  ✅ Total score: ${paramsScore + mergedRevenueScore}`);
     } else {
-      mergedMap.set(p.fullName, p);
+      // ========== НОВЫЙ УЧАСТНИК ==========
+      console.log(`🆕 New participant: ${p.fullName}`);
+      
+      mergedMap.set(p.fullName, {
+        ...p,
+        lastUpdated: now.toISOString(),
+        currentMonth: currentMonthKey,
+        monthlyBase: {},
+        monthlyBaseRevenue: 0,
+      });
     }
   });
 
   const mergedParticipants = Array.from(mergedMap.values());
 
-  // Step 4: Write merged data back to "База данных"
+  // Step 4: Записываем обратно в базу данных
+  console.log(`💾 Writing ${mergedParticipants.length} participants to database`);
   await writeSheetByName(spreadsheetUrlOrId, 'База данных', mergedParticipants, parameters);
 
-  // Important: do NOT clear "Файл редактирования"
+  console.log('✅ Sync complete!');
   return mergedParticipants;
 };
 
-// Re-export for use in components
 export { GAS_WEB_APP_URL };
