@@ -61,7 +61,6 @@ function App() {
         
         if (isMounted && freshData && freshData.length > 0) {
           setParticipants(freshData);
-          setLastSyncTime(new Date());
           logger.success('Init', `Loaded ${freshData.length} participants from Google Sheets`);
           
           // Показываем уведомление только если данные отличаются от кэша
@@ -240,10 +239,7 @@ const handleImportGoogleSheet = useCallback(async () => {
         ...p,
         id: idByName.get(p.fullName.toLowerCase()) || p.id,
       }));
-    });
-
-    // ✅ НЕТ setLastSyncTime(new Date()); здесь!
-    
+    });    
     logger.success('Sync', `Imported ${importedParticipants.length} participants from Google Sheets`);
     showToast(`Импорт завершен! Загружено ${importedParticipants.length} участников`, 'success');
     
