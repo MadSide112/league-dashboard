@@ -322,7 +322,11 @@ const handleImportGoogleSheet = useCallback(async () => {
       );
 
       setParticipants(mergedParticipants);
-      setLastSyncTime(new Date());
+      
+      const lastSync = await getLastSyncTime(CONFIG.SHEET_URL);
+      if (lastSync) {
+        setLastSyncTime(lastSync);
+      }
       
       logger.success(
         'Sync', 
