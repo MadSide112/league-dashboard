@@ -16,8 +16,8 @@ export const initialParameters: Parameter[] = [
   { id: '11', name: 'Пост', weight: 1, shouldSum: true },
   { id: '12', name: 'Отзыв', weight: 1, shouldSum: true },
   { id: '13', name: 'Работа в департаменте', weight: 1, shouldSum: true },
-  { id: '14', name: 'Дежурство', weight: 1, shouldSum: true },
-  { id: '15', name: 'Нарушение регламента', weight: -1, shouldSum: true },
+  { id: '15', name: 'Дежурство', weight: 1, shouldSum: true },
+  { id: '14', name: 'Нарушение регламента', weight: -1, shouldSum: true },
 ];
 
 // Текущая формула выручки
