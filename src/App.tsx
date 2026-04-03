@@ -213,47 +213,47 @@ function App() {
   // ============================================================================
 
   // Импорт из Google Sheets
-  const handleImportGoogleSheet = useCallback(async () => {
-    setIsImportingSheet(true);
+// Синхронизация с базой данных
+const handleSyncWithDatabase = useCallback(async () => {
+  setIsSyncing(true);
+  
+  try {
+    logger.info('Sync', 'Starting database synchronization...');
     
-    try {
-      logger.info('Sync', 'Starting import from Google Sheets...');
-      
-      const importedParticipants = await withRetry(
-        () => importParticipantsFromSheet(CONFIG.SHEET_URL, parameters),
-        {
-          maxRetries: CONFIG.MAX_RETRIES,
-          delayMs: CONFIG.RETRY_DELAY_MS,
-          backoff: 'exponential',
-          onRetry: (attempt, error) => {
-            logger.warning('Retry', `Import attempt ${attempt}/${CONFIG.MAX_RETRIES}: ${getErrorMessage(error)}`);
-            showToast(`Повторная попытка ${attempt}/${CONFIG.MAX_RETRIES}...`, 'warning');
-          }
+    const mergedParticipants = await withRetry(
+      () => syncWithDatabase(CONFIG.SHEET_URL, parameters),
+      {
+        maxRetries: CONFIG.MAX_RETRIES,
+        delayMs: CONFIG.RETRY_DELAY_MS,
+        backoff: 'exponential',
+        onRetry: (attempt, error) => {
+          logger.warning('Retry', `Sync attempt ${attempt}/${CONFIG.MAX_RETRIES}: ${getErrorMessage(error)}`);
+          showToast(`Повторная попытка ${attempt}/${CONFIG.MAX_RETRIES}...`, 'warning');
         }
-      );
+      }
+    );
 
-      // Сохраняем существующие ID для участников с тем же именем
-      setParticipants(current => {
-        const idByName = new Map(current.map(p => [p.fullName.toLowerCase(), p.id]));
-        
-        return importedParticipants.map(p => ({
-          ...p,
-          id: idByName.get(p.fullName.toLowerCase()) || p.id,
-        }));
-      });
-
-      setLastSyncTime(new Date());
-      logger.success('Sync', `Imported ${importedParticipants.length} participants from Google Sheets`);
-      showToast(`Синхронизация завершена! Загружено ${importedParticipants.length} участников`, 'success');
-      
-    } catch (err) {
-      const errorMessage = getErrorMessage(err);
-      logger.error('Sync', `Import failed: ${errorMessage}`);
-      showToast(`Ошибка синхронизации: ${errorMessage}`, 'error');
-    } finally {
-      setIsImportingSheet(false);
-    }
-  }, [parameters, setParticipants, showToast]);
+    setParticipants(mergedParticipants);
+    setLastSyncTime(new Date()); // ✅ Обновляем время синхронизации
+    
+    logger.success(
+      'Sync', 
+      `Database synced: ${mergedParticipants.length} participants. Data from "Файл редактирования" added to "База данных"`
+    );
+    
+    showToast(
+      'Синхронизация завершена! Данные из "Файл редактирования" добавлены в "База данных".', 
+      'success'
+    );
+    
+  } catch (err) {
+    const errorMessage = getErrorMessage(err);
+    logger.error('Sync', `Database sync failed: ${errorMessage}`);
+    showToast(`Ошибка синхронизации: ${errorMessage}`, 'error');
+  } finally {
+    setIsSyncing(false);
+  }
+}, [parameters, setParticipants, showToast]);
 
   // Экспорт снапшота в новый лист
   const handleExportSnapshot = useCallback(async () => {
