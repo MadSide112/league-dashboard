@@ -313,12 +313,25 @@ export const syncWithDatabase = async (
     mergedMap.set(p.fullName, { ...p });
   });
 
-  const now = new Date();
+   const now = await getServerTime();
   const currentMonthKey = getMonthKey(now);
+  
+  console.log(`📅 Server time: ${now.toISOString()}`);
+  console.log(`📅 Current month: ${currentMonthKey}`);
 
-  // Обрабатываем участников из файла редактирования
   editingParticipants.forEach((p: Participant) => {
     const existing = mergedMap.get(p.fullName);
+    
+    if (existing) {
+      const lastMonthKey = existing.currentMonth || currentMonthKey;
+      const monthChanged = hasMonthChanged(lastMonthKey, currentMonthKey);
+      
+      console.log(`👤 Processing ${p.fullName}:`, {
+        lastMonth: lastMonthKey,
+        currentMonth: currentMonthKey,
+        monthChanged,
+        serverTime: now.toISOString(),
+      });
     
     if (existing) {
       // ========== УЧАСТНИК УЖЕ ЕСТЬ В БАЗЕ ==========
@@ -556,4 +569,31 @@ export const setLastSyncTime = async (
   return setSystemSetting(spreadsheetUrlOrId, 'lastSyncTime', date.toISOString());
 };
 
+// Получить серверное время из Google Apps Script
+export const getServerTime = async (): Promise<Date> => {
+  try {
+    const response = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getServerTime',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error('Failed to get server time');
+    }
+
+    return new Date(result.serverTime);
+  } catch (error) {
+    console.warn('Failed to get server time, using local time:', error);
+    // Fallback на локальное время
+    return new Date();
+  }
+};
 export { GAS_WEB_APP_URL };
